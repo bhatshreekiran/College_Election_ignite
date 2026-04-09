@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - College Club Election</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-header-content">
+                <h1>Admin Dashboard</h1>
+                <p>Manage and review nominations</p>
+            </div>
+            <div class="admin-header-actions">
+                <button id="logoutBtn" class="btn-secondary" onclick="logoutAdmin()">Sign Out</button>
+            </div>
+        </header>
+
+        <!-- Admin Main Content -->
+        <main class="admin-main">
+            <!-- Controls Section -->
+            <div class="admin-controls">
+                <div class="filter-group">
+                    <label for="semesterFilter">Filter by Semester:</label>
+                    <select id="semesterFilter" onchange="applyFilters()">
+                        <option value="all">All Semesters</option>
+                        <option value="Fall 2024">Fall 2024</option>
+                        <option value="Spring 2025">Spring 2025</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="statusFilter">Filter by Status:</label>
+                    <select id="statusFilter" onchange="applyFilters()">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="postFilter">Filter by Post:</label>
+                    <select id="postFilter" onchange="applyFilters()">
+                        <option value="all">All Posts</option>
+                        <option value="President">President</option>
+                        <option value="Vice President">Vice President</option>
+                        <option value="Secretary">Secretary</option>
+                        <option value="Treasurer">Treasurer</option>
+                        <option value="Event Coordinator">Event Coordinator</option>
+                        <option value="Marketing Lead">Marketing Lead</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="exportNominationsToPDF()">Export to PDF</button>
+            </div>
+
+            <!-- Nominations Table -->
+            <div class="table-container">
+                <table id="nominationsTable" class="nominations-table">
+                    <thead>
+                        <tr>
+                            <th>Nominator Email</th>
+                            <th>Nominator Name</th>
+                            <th>Posts Nominated</th>
+                            <th>Photo</th>
+                            <th>Resume</th>
+                            <th>Status</th>
+                            <th>Submitted Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nominationsBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">Loading nominations...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>No nominations found.</p>
+            </div>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- Modal for Nomination Details -->
+    <div id="nominationModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>Nomination Details</h2>
+            <div id="nominationDetails" class="nomination-details">
+                <!-- Details will be populated here -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-success" onclick="approveNomination()">Approve</button>
+                <button type="button" class="btn-danger" onclick="rejectNomination()">Reject</button>
+                <button type="button" class="btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="firebase.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
