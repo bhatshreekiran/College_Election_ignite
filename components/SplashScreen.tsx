@@ -43,14 +43,14 @@ export default function SplashScreen({ children }: { children: React.ReactNode }
               transition={{ delay: 0.5, duration: 0.5 }}
               className="mt-10 flex flex-col items-center"
             >
-              <div className="flex items-center gap-2 text-amber-500 font-black tracking-[0.4em] uppercase text-sm">
-                Initiating Session
+              <div className="flex items-center gap-2 text-amber-500 font-semibold text-base">
+                Loading, please wait
                 <motion.span 
                   animate={{ opacity: [0, 1, 0] }} 
                   transition={{ duration: 1.5, repeat: Infinity }}
                 >...</motion.span>
               </div>
-              <p className="text-slate-500 text-[10px] mt-2 uppercase tracking-widest font-bold">Establishing Secure Node</p>
+              <p className="text-slate-500 text-sm mt-2">Setting things up for you</p>
             </motion.div>
           </motion.div>
         )}

@@ -1,4 +1,4 @@
-'use client';
+'use client'; // trigger rebuild 123
 
 import { useState, useEffect } from 'react';
 import { signInWithPopup, signOut } from 'firebase/auth';
@@ -207,7 +207,7 @@ export default function NominatePage() {
     e.preventDefault();
     if (!photoFile || !db) return;
     setLoading(true);
-    setLoadingMsg('Submitting Final Nomination...');
+    setLoadingMsg('Submitting your nomination, please wait...');
     try {
       const photoBase64 = await compressImage(photoFile, 800, 0.78);
       await setDoc(doc(db, 'nominations', userEmail), {
@@ -254,20 +254,20 @@ export default function NominatePage() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
         <div className="bg-slate-800 border border-slate-700 p-10 rounded-[2.5rem] shadow-2xl text-center max-w-md w-full space-y-6">
            <div className="text-6xl">🙌</div>
-           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Got It!</h2>
-           <p className="text-slate-400 text-sm leading-relaxed">Your nomination has been successfully recorded. You can view your status here or withdraw if needed.</p>
+           <h2 className="text-2xl font-bold text-white">Nomination Received!</h2>
+           <p className="text-slate-400 text-sm leading-relaxed">Your nomination has been successfully recorded. You can view your details below or withdraw if needed.</p>
            <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl text-left text-xs space-y-3">
-              <p><span className="text-white opacity-50 font-bold">NAME:</span> <span className="text-white">{data.name}</span></p>
-              <p><span className="text-white opacity-50 font-bold">POST:</span> <span className="text-amber-500 font-bold">{data.posts?.join(', ')}</span></p>
-              <p><span className="text-white opacity-50 font-bold">ACADEMIC:</span> <span className="text-white">{data.semester} Sem, {data.year || getYearFromSemester(data.semester)}</span></p>
+              <p><span className="text-white opacity-50 font-bold">Name:</span> <span className="text-white">{data.name}</span></p>
+              <p><span className="text-white opacity-50 font-bold">Applied For:</span> <span className="text-amber-500 font-bold">{data.posts?.join(', ')}</span></p>
+              <p><span className="text-white opacity-50 font-bold">Year &amp; Semester:</span> <span className="text-white">{data.semester} Sem, {data.year || getYearFromSemester(data.semester)}</span></p>
            </div>
            
            <div className="pt-2 flex flex-col gap-4">
-              <button onClick={handleSignOut} className="w-full py-4 bg-amber-500 text-slate-900 font-black rounded-2xl uppercase tracking-[0.2em] shadow-lg shadow-amber-500/20 active:scale-95 transition-all">Sign Out</button>
+              <button onClick={handleSignOut} className="w-full py-4 bg-amber-500 text-slate-900 font-bold rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all">Sign Out</button>
               <button 
                 onClick={handleWithdraw} 
                 disabled={withdrawing} 
-                className="w-full py-4 bg-red-900/10 text-red-500 font-black rounded-2xl uppercase tracking-[0.2em] border border-red-500/20 hover:bg-red-900/30 active:scale-95 transition-all disabled:opacity-50"
+                className="w-full py-4 bg-red-900/10 text-red-500 font-bold rounded-2xl border border-red-500/20 hover:bg-red-900/30 active:scale-95 transition-all disabled:opacity-50"
               >
                 {withdrawing ? 'Removing...' : 'Withdraw Nomination'}
               </button>
@@ -281,16 +281,16 @@ export default function NominatePage() {
     <div className="min-h-screen font-serif bg-[linear-gradient(to_bottom_right,#0f172a,#1e3a8a,#0f172a)] py-12 px-4 shadow-inner">
       <div className="max-w-3xl mx-auto space-y-10">
         <div className="text-center group">
-           <h1 className="text-5xl font-black text-white uppercase tracking-tighter group-hover:scale-105 transition-transform duration-500 drop-shadow-lg">Academic Council Nomination</h1>
-           <p className="text-amber-400 mt-2 text-sm font-black tracking-[0.4em] uppercase drop-shadow-md">Elections 2026 - Official Portal</p>
+           <h1 className="text-4xl font-bold text-white group-hover:scale-105 transition-transform duration-500 drop-shadow-lg">Department Club Nominations</h1>
+           <p className="text-amber-400 mt-2 text-sm font-medium drop-shadow-md">Ignite Club Elections 2026</p>
         </div>
 
         {step === 'login' ? (
           <div className="bg-slate-800/80 border border-slate-700 p-12 rounded-[3rem] shadow-2xl text-center space-y-8 max-w-lg mx-auto backdrop-blur-md">
              <div className="text-5xl">🎓</div>
-             <h2 className="text-2xl font-black text-white uppercase tracking-tight">Student Portal</h2>
-             <p className="text-slate-400 text-sm leading-relaxed">Sign in with your official <span className="text-white font-bold">@{ALLOWED_DOMAIN}</span> to continue.</p>
-             {error && <p className="text-red-400 text-[10px] font-black uppercase bg-red-950/40 p-3 rounded-xl border border-red-500/20 tracking-widest">{error}</p>}
+             <h2 className="text-2xl font-bold text-white">Student Sign In</h2>
+             <p className="text-slate-400 text-sm leading-relaxed">Use your official college email (<span className="text-white font-semibold">@{ALLOWED_DOMAIN}</span>) to continue.</p>
+             {error && <p className="text-red-400 text-sm bg-red-950/40 p-3 rounded-xl border border-red-500/20">{error}</p>}
              <button onClick={handleGoogleLogin} disabled={loginLoading} className="w-full py-4 bg-white text-slate-800 font-bold rounded-full text-base flex items-center justify-center gap-4 hover:bg-slate-100 transition-all shadow-lg active:scale-[0.98] border border-slate-200">
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-6 h-6">
                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"/>
@@ -298,11 +298,11 @@ export default function NominatePage() {
                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                </svg>
-               {loginLoading ? 'Signing in...' : 'Sign in with Google'}
+               {loginLoading ? 'Signing in, please wait...' : 'Sign in with Google'}
              </button>
 
              <div className="pt-4 border-t border-slate-700/50">
-                <button onClick={() => window.location.href = '/admin'} className="w-full py-3 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-amber-500 font-bold rounded-full text-xs transition-all border border-slate-700 uppercase tracking-widest">
+                <button onClick={() => window.location.href = '/admin'} className="w-full py-3 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-amber-500 font-bold rounded-full text-xs transition-all border border-slate-700">
                   Staff / Admin Login
                 </button>
              </div>
@@ -310,14 +310,18 @@ export default function NominatePage() {
         ) : (
           <div className="space-y-8">
             <div className="flex items-center justify-between bg-slate-800/40 border border-slate-700/60 rounded-[2rem] px-6 py-4 backdrop-blur-sm shadow-xl">
-               <div className="flex items-center gap-4">
-                  <img src={userPhoto} className="w-12 h-12 rounded-2xl border-2 border-amber-500/20 shadow-lg" alt="Profile" />
+                <div className="flex items-center gap-4">
+                  {userPhoto ? (
+                    <img src={userPhoto} className="w-12 h-12 rounded-2xl border-2 border-amber-500/20 shadow-lg" alt="Profile" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl border-2 border-slate-700 bg-slate-800 flex items-center justify-center text-xl shadow-lg">👤</div>
+                  )}
                   <div>
-                    <p className="text-white text-xs font-black uppercase tracking-tight">{userName}</p>
-                    <p className="text-slate-500 text-[10px] font-bold">{userEmail}</p>
+                    <p className="text-white text-sm font-semibold">{userName || 'Student User'}</p>
+                    <p className="text-slate-500 text-xs">{userEmail}</p>
                   </div>
                </div>
-               <button onClick={handleSignOut} className="px-4 py-2 bg-slate-700/50 hover:bg-red-900/30 text-white/40 hover:text-red-400 text-[9px] font-black uppercase rounded-xl transition-all tracking-widest border border-slate-700">Sign Out</button>
+               <button onClick={handleSignOut} className="px-4 py-2 bg-slate-700/50 hover:bg-red-900/30 text-white/40 hover:text-red-400 text-xs font-semibold rounded-xl transition-all border border-slate-700">Sign Out</button>
             </div>
 
             <div className="bg-slate-800/80 border border-slate-700 rounded-[3rem] shadow-2xl p-8 sm:p-12 relative overflow-hidden">
@@ -331,14 +335,14 @@ export default function NominatePage() {
                {step === 1 && (
                  <form onSubmit={handleStep1} className="space-y-12">
                    <div className="text-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Eligibility Verification</h2>
-                      <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Step 01 / Basic Requirements</p>
+                      <h2 className="text-2xl font-bold text-white">Am I Eligible?</h2>
+                      <p className="text-slate-500 text-sm">Step 1 of 3 — Confirm your eligibility before applying</p>
                    </div>
                    
                    <div className="flex justify-center mb-6">
                       <div className="p-8 rounded-[2.5rem] border-2 border-amber-500 bg-amber-500/10 ring-4 ring-amber-500/10 shadow-2xl flex flex-col items-center gap-4 w-64">
                          <div className="w-16 h-16 rounded-[1.25rem] flex items-center justify-center text-3xl font-black transition-all bg-amber-500 text-slate-900 rotate-3">{semester[0]}</div>
-                         <p className="font-black uppercase tracking-[0.2em] text-xs text-amber-500">DETECTED: {semester} SEM</p>
+                         <p className="font-semibold text-sm text-amber-500">Your semester: {semester}</p>
                          <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center bg-amber-500 border-amber-500 text-slate-900 scale-110"><span className="text-[10px] font-black">✓</span></div>
                       </div>
                    </div>
@@ -356,7 +360,7 @@ export default function NominatePage() {
                       </label>
                    </div>
 
-                   <button type="submit" disabled={!semester || !hasNoBacklog} className="w-full py-5 bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm transition-all shadow-2xl shadow-amber-500/20 active:scale-95">Verify & Proceeed →</button>
+                   <button type="submit" disabled={!semester || !hasNoBacklog} className="w-full py-5 bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm transition-all shadow-2xl shadow-amber-500/20 active:scale-95">Continue →</button>
                  </form>
                )}
 
@@ -364,8 +368,8 @@ export default function NominatePage() {
                {step === 2 && (
                  <form onSubmit={handleStep2} className="space-y-10">
                    <div className="flex flex-col items-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Candidate Intention</h2>
-                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Select 1 Post & explain your fit</p>
+                      <h2 className="text-2xl font-bold text-white">Choose a Post</h2>
+                      <p className="text-slate-500 text-sm">Step 2 of 3 — Select a post and write why you want it</p>
                    </div>
 
                    <div className="space-y-6">
@@ -377,7 +381,7 @@ export default function NominatePage() {
                             <div className="flex items-center justify-between mb-6">
                                <div className="flex flex-col">
                                   <h3 className={`text-lg font-black uppercase tracking-tight ${sel ? 'text-amber-400' : 'text-white'}`}>{p}</h3>
-                                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Level 0{semester[0]} Position</p>
+                                  
                                </div>
                                <button type="button" onClick={() => togglePost(p)} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${sel ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20'}`}>
                                   {sel ? 'Deselect' : 'Select Post'}
@@ -390,7 +394,7 @@ export default function NominatePage() {
 
                             {sel && (
                               <div className="mt-8 space-y-3 pt-6 border-t border-slate-700/50 animate-in fade-in zoom-in-95 duration-500">
-                                 <label className="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Why do you want this post? *</label>
+                                 <label className="block text-sm font-semibold text-amber-500">Why do you want this post? *</label>
                                  <textarea 
                                     value={statements[p] || ''} 
                                     onChange={e => handleStatementChange(p, e.target.value)} 
@@ -399,7 +403,7 @@ export default function NominatePage() {
                                     className="w-full h-32 bg-slate-900/60 border-2 border-slate-700 rounded-2xl p-4 text-white text-xs font-medium leading-relaxed resize-none outline-none focus:border-amber-500 transition-all placeholder:text-slate-700"
                                  />
                                  <div className="flex justify-between items-center text-[9px] font-black">
-                                    <span className="text-slate-600 tracking-tighter uppercase">Min 10 characters required</span>
+                                    <span className="text-slate-600 text-xs">Minimum 10 characters required</span>
                                     <span className={(statements[p]?.length || 0) >= 800 ? 'text-red-500' : 'text-slate-500'}>{(statements[p]?.length || 0)} / 800</span>
                                  </div>
                               </div>
@@ -411,7 +415,7 @@ export default function NominatePage() {
 
                    <div className="flex gap-4 pt-10">
                       <button type="button" onClick={() => setStep(1)} className="px-8 py-5 bg-slate-700/50 text-white/50 hover:text-white font-black rounded-[2rem] uppercase tracking-widest text-xs transition-all border border-slate-700">Back</button>
-                      <button type="submit" className="flex-1 py-5 bg-amber-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all">Review Final Steps →</button>
+                      <button type="submit" className="flex-1 py-5 bg-amber-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm shadow-xl shadow-amber-500/20 active:scale-95 transition-all">Next Step →</button>
                    </div>
                  </form>
                )}
@@ -420,8 +424,8 @@ export default function NominatePage() {
                {step === 3 && (
                  <form onSubmit={handleSubmit} className="space-y-12">
                    <div className="text-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Final Authentication</h2>
-                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Upload Photo & Confirm Submission</p>
+                      <h2 className="text-2xl font-bold text-white">Upload Your Photo</h2>
+                      <p className="text-slate-500 text-sm">Step 3 of 3 — Upload a clear face photo and submit</p>
                    </div>
 
                    <div className="bg-slate-900/50 p-8 rounded-[3rem] border border-slate-700/60 flex flex-col items-center space-y-8">
@@ -451,7 +455,7 @@ export default function NominatePage() {
 
                    <div className="flex gap-4">
                       <button type="button" onClick={() => setStep(2)} disabled={loading} className="px-8 py-5 bg-slate-700/50 text-white/50 hover:text-white font-black rounded-[2rem] uppercase tracking-widest text-xs transition-all border border-slate-700 disabled:opacity-30">Back</button>
-                      <button type="submit" disabled={loading || !photoFile} className="flex-1 py-5 bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm shadow-2xl shadow-amber-500/20 active:scale-95 transition-all">Submit Final Bid 🚀</button>
+                      <button type="submit" disabled={loading || !photoFile} className="flex-1 py-5 bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-black rounded-[2rem] uppercase tracking-[0.3em] text-sm shadow-2xl shadow-amber-500/20 active:scale-95 transition-all">Submit My Nomination 🚀</button>
                    </div>
                  </form>
                )}
@@ -462,7 +466,7 @@ export default function NominatePage() {
         
         {/* Hidden Admin Link */}
         <div className="text-center pt-8">
-           <a href="/admin" className="text-[9px] font-black uppercase tracking-widest text-slate-500/30 hover:text-amber-500 transition-colors">Admin Portal Access</a>
+           <a href="/admin" className="text-xs text-slate-500/30 hover:text-amber-500 transition-colors">Admin Portal</a>
         </div>
       </div>
     </div>

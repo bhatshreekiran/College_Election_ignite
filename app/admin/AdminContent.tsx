@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { isFirebaseConfigured, auth, db } from '@/lib/firebase';
@@ -26,6 +27,7 @@ export default function AdminPage() {
   const [password, setPassword]       = useState('');
   const [loginError, setLoginError]   = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const router = useRouter();
 
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [filterStatus, setFilterStatus]     = useState('all');
@@ -44,7 +46,15 @@ export default function AdminPage() {
     });
 
     const unsub = auth.onAuthStateChanged((u: any) => {
-      if (u) setIsLoggedIn(true);
+      if (u) {
+        const email = u.email?.toLowerCase() || '';
+        // Redirect test faculty accounts to student portal
+        if (email.includes('sarveshsir.23ad') || email.includes('sarveshsir.24ad')) {
+          router.push('/nominate');
+          return;
+        }
+        setIsLoggedIn(true);
+      }
       else setIsLoggedIn(false);
     });
     return unsub;
@@ -137,14 +147,14 @@ export default function AdminPage() {
          <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-3xl w-full max-w-sm border border-slate-700 space-y-4 shadow-2xl">
            <div className="text-center space-y-2">
               <div className="text-4xl">🔐</div>
-              <h1 className="text-xl font-black text-white uppercase tracking-tight">Admin Gate</h1>
+              <h1 className="text-xl font-bold text-white">Admin Login</h1>
            </div>
            {loginError && <p className="text-red-400 text-[10px] font-bold text-center uppercase tracking-widest">{loginError}</p>}
            <div className="space-y-4">
               <input type="email" placeholder="Email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
               <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
            </div>
-           <button type="submit" className="w-full py-4 bg-amber-500 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm shadow-xl shadow-amber-500/10 active:scale-95 transition-all">{loginLoading ? 'Opening...' : 'Login'}</button>
+           <button type="submit" className="w-full py-4 bg-amber-500 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm shadow-xl shadow-amber-500/10 active:scale-95 transition-all">{loginLoading ? 'Logging in...' : 'Log In'}</button>
          </form>
        </div>
      );
@@ -160,7 +170,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
             <div className="p-8 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-               <div><h3 className="text-xl font-black text-white uppercase tracking-tight">Bid Justifications</h3><p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mt-1">Candidate: {viewReasons.name}</p></div>
+               <div><h3 className="text-xl font-bold text-white">Why I Want This Post</h3><p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mt-1">Student: {viewReasons.name}</p></div>
                <button onClick={() => setViewReasons(null)} className="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-400 font-bold transition-colors">×</button>
             </div>
             <div className="p-8 overflow-y-auto space-y-6 custom-scrollbar">
@@ -174,56 +184,56 @@ export default function AdminPage() {
                ))}
                {Object.keys(viewReasons.data).length === 0 && <p className="text-center py-10 opacity-20 italic">No specific statements found.</p>}
             </div>
-            <div className="p-6 bg-slate-900/30 text-center"><button onClick={() => setViewReasons(null)} className="px-10 py-3 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest transition-colors">Close Record</button></div>
+            <div className="p-6 bg-slate-900/30 text-center"><button onClick={() => setViewReasons(null)} className="px-10 py-3 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest transition-colors">Close</button></div>
           </div>
         </div>
       )}
 
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex flex-wrap justify-between items-end gap-6">
-           <div><h1 className="text-4xl font-black text-white uppercase tracking-tighter">Election HQ</h1><p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Live Nomination Stream</p></div>
+           <div><h1 className="text-3xl font-bold text-white">Election Dashboard</h1><p className="text-slate-500 text-sm mt-1">Live view of all submitted nominations</p></div>
            <div className="flex items-center gap-4">
               <button 
                 onClick={generateAcceptedPDF}
-                className="px-5 py-2.5 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-slate-900 border border-amber-500/20 rounded-xl text-[9px] font-black uppercase transition-all flex items-center gap-2 shadow-xl active:scale-95"
+                className="px-5 py-2.5 bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-slate-900 border border-amber-500/20 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow-xl active:scale-95"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Export Accepted (PDF)
               </button>
               <div className="bg-slate-800/80 p-1 rounded-2xl border border-slate-700 flex">
-                <button onClick={() => setViewMode('posts')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'posts' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>Post View</button>
-                <button onClick={() => setViewMode('table')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'table' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>Table View</button>
+                <button onClick={() => setViewMode('posts')} className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all ${viewMode === 'posts' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>By Post</button>
+                <button onClick={() => setViewMode('table')} className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all ${viewMode === 'table' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>Table</button>
               </div>
-              <button onClick={handleLogout} className="px-5 py-2.5 bg-red-900/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-[9px] font-black uppercase transition-all">Sign Out</button>
+              <button onClick={handleLogout} className="px-5 py-2.5 bg-red-900/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-xs font-semibold transition-all">Sign Out</button>
            </div>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-           {[ {l: 'Applications', v: nominations.length}, {l: 'Pending', v: nominations.filter(n => n.status === 'pending').length}, {l: 'Verified', v: nominations.filter(n => n.status === 'accepted').length}, {l: 'Denied', v: nominations.filter(n => n.status === 'rejected').length} ].map(s => (
+           {[ {l: 'Total Applications', v: nominations.length}, {l: 'Pending Review', v: nominations.filter(n => n.status === 'pending').length}, {l: 'Accepted', v: nominations.filter(n => n.status === 'accepted').length}, {l: 'Rejected', v: nominations.filter(n => n.status === 'rejected').length} ].map(s => (
              <div key={s.l} className="bg-slate-800/40 p-6 rounded-[2.5rem] border border-slate-700 text-center space-y-1 backdrop-blur-sm">
-                <p className="text-4xl font-black text-white tracking-tighter">{s.v}</p>
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{s.l}</p>
+                <p className="text-4xl font-bold text-white tracking-tighter">{s.v}</p>
+                <p className="text-xs text-slate-500">{s.l}</p>
              </div>
            ))}
         </div>
 
         {/* Filtration */}
         <div className="bg-slate-800/40 border border-slate-700 rounded-[2rem] p-5 shadow-xl backdrop-blur-sm">
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-[10px] font-black uppercase text-amber-500 outline-none cursor-pointer">
-                <option value="all">Any Status</option>
+           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs font-semibold text-amber-500 outline-none cursor-pointer">
+                <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="accepted">Accepted</option>
                 <option value="rejected">Rejected</option>
              </select>
-             <select value={filterSemester} onChange={e => setFilterSemester(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-[10px] font-black uppercase text-amber-500 outline-none cursor-pointer">
-                <option value="all">Any Year</option>
+             <select value={filterSemester} onChange={e => setFilterSemester(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs font-semibold text-amber-500 outline-none cursor-pointer">
+                <option value="all">All Semesters</option>
                 <option value="4th">4th Sem</option>
                 <option value="6th">6th Sem</option>
              </select>
-             <select value={filterPost} onChange={e => setFilterPost(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-[10px] font-black uppercase text-amber-500 outline-none cursor-pointer">
-                <option value="all">Every Post / Level</option>
+             <select value={filterPost} onChange={e => setFilterPost(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs font-semibold text-amber-500 outline-none cursor-pointer">
+                <option value="all">All Posts</option>
                 {(filterSemester === 'all' ? ALL_POSTS : POSTS_BY_SEMESTER[filterSemester]).map(post => <option key={post} value={post}>{post}</option>)}
              </select>
            </div>
@@ -232,8 +242,8 @@ export default function AdminPage() {
         {viewMode === 'table' ? (
           <div className="bg-slate-800/40 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm">
              <table className="w-full text-left">
-                <thead className="bg-slate-800/80 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-700">
-                   <tr><th className="p-6">Candidate</th><th className="p-6">Bidding For</th><th className="p-6">Intent</th><th className="p-6 text-center">Status</th><th className="p-6 text-right">Decision</th></tr>
+                <thead className="bg-slate-800/80 text-xs font-semibold text-slate-500 border-b border-slate-700">
+                   <tr><th className="p-6">Student Name</th><th className="p-6">Applied For</th><th className="p-6">Statement</th><th className="p-6 text-center">Status</th><th className="p-6 text-right">Decision</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
                    {filtered.map(n => (
@@ -250,14 +260,14 @@ export default function AdminPage() {
                            <div className="flex flex-wrap gap-2">{n.posts.map(p => <span key={p} className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1.5 rounded-xl text-[8px] font-black uppercase">{p}</span>)}</div>
                         </td>
                         <td className="p-6">
-                           <button onClick={() => setViewReasons({name: n.name, data: n.post_statements || (n.statement ? {'General Statement': n.statement} : {})})} className="px-5 py-2.5 bg-slate-700/50 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-amber-500 transition-all">Review Justification</button>
+                           <button onClick={() => setViewReasons({name: n.name, data: n.post_statements || (n.statement ? {'General Statement': n.statement} : {})})} className="px-5 py-2.5 bg-slate-700/50 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-amber-500 transition-all">Read Statement</button>
                         </td>
                         <td className="p-6 text-center"><span className={`text-[8px] font-black uppercase px-4 py-1.5 rounded-full border ${n.status==='accepted'?'bg-green-500/10 text-green-400 border-green-500/20':n.status==='rejected'?'bg-red-500/10 text-red-500 border-red-500/20':'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}`}>{n.status}</span></td>
                         <td className="p-6 text-right">
                            {n.status === 'pending' ? (
                               <div className="flex justify-end gap-3"><button onClick={() => updateStatus(n.id, 'accepted')} className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-[9px] font-black uppercase rounded-xl transition-all shadow-lg active:scale-95">Accept</button><button onClick={() => updateStatus(n.id, 'rejected')} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase rounded-xl transition-all shadow-lg active:scale-95">Reject</button></div>
                            ) : (
-                              <button onClick={() => updateStatus(n.id, 'pending')} className="text-[8px] font-black text-slate-600 uppercase underline hover:text-amber-500 transition-colors">Reset Status</button>
+                              <button onClick={() => updateStatus(n.id, 'pending')} className="text-[8px] font-black text-slate-600 uppercase underline hover:text-amber-500 transition-colors">Reset</button>
                            )}
                         </td>
                      </tr>
@@ -269,7 +279,7 @@ export default function AdminPage() {
           <div className="space-y-16">
              {['6th', '4th'].reverse().map(sem => (
                <div key={sem} className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                  <div className="flex items-center gap-6"><h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-xs font-black">{sem[0]}</span> {sem} Semester Bids</h2><div className="h-px flex-1 bg-slate-700/50" /></div>
+                  <div className="flex items-center gap-6"><h2 className="text-xl font-bold text-white flex items-center gap-2"><span className="w-8 h-8 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-xs font-black">{sem[0]}</span> {sem} Semester Applications</h2><div className="h-px flex-1 bg-slate-700/50" /></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                      {POSTS_BY_SEMESTER[sem].map(post => {
                        const apps = nominations.filter(a => a.posts?.includes(post) && (filterStatus === 'all' || a.status === filterStatus));
@@ -289,7 +299,7 @@ export default function AdminPage() {
                                     </div>
                                  </div>
                                ))}
-                               {apps.length === 0 && <p className="text-center py-10 text-[10px] font-black text-slate-700 tracking-widest italic uppercase opacity-40">Zero Contests</p>}
+                               {apps.length === 0 && <p className="text-center py-10 text-[10px] font-black text-slate-700 tracking-widest italic uppercase opacity-40">No applications yet</p>}
                             </div>
                          </div>
                        );
