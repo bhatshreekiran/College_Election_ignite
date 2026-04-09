@@ -350,7 +350,7 @@ export default function NominatePage() {
                             {hasNoBacklog && <span className="absolute left-2.5 top-2.5 text-slate-900 text-sm font-black pointer-events-none">✓</span>}
                          </div>
                          <div className="space-y-1">
-                            <p className={`font-black uppercase tracking-widest text-xs transition-all ${hasNoBacklog ? 'text-amber-500' : 'text-slate-400'}`}>I have cleared all backlogs</p>
+                            <p className={`font-black uppercase tracking-widest text-xs transition-all ${hasNoBacklog ? 'text-amber-500' : 'text-slate-400'}`}>I have no active backlogs</p>
                             <p className="text-[10px] text-slate-600 font-bold leading-relaxed">Candidates with active backlogs are strictly not allowed to contest as per college policy.</p>
                          </div>
                       </label>
