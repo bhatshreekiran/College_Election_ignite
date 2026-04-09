@@ -160,7 +160,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
             <div className="p-8 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-               <div><h3 className="text-xl font-black text-white uppercase tracking-tight">Candidate Statements</h3><p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mt-1">Candidate: {viewReasons.name}</p></div>
+               <div><h3 className="text-xl font-black text-white uppercase tracking-tight">Bid Justifications</h3><p className="text-amber-500 text-[10px] font-black uppercase tracking-widest mt-1">Candidate: {viewReasons.name}</p></div>
                <button onClick={() => setViewReasons(null)} className="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-400 font-bold transition-colors">×</button>
             </div>
             <div className="p-8 overflow-y-auto space-y-6 custom-scrollbar">
@@ -181,7 +181,7 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex flex-wrap justify-between items-end gap-6">
-           <div><h1 className="text-4xl font-black text-white uppercase tracking-tighter">Election Dashboard</h1><p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Live Nominations Overview</p></div>
+           <div><h1 className="text-4xl font-black text-white uppercase tracking-tighter">Election HQ</h1><p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Live Nomination Stream</p></div>
            <div className="flex items-center gap-4">
               <button 
                 onClick={generateAcceptedPDF}
@@ -233,7 +233,7 @@ export default function AdminPage() {
           <div className="bg-slate-800/40 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm">
              <table className="w-full text-left">
                 <thead className="bg-slate-800/80 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-700">
-                   <tr><th className="p-6">Candidate</th><th className="p-6">Applied Post</th><th className="p-6">Statement</th><th className="p-6 text-center">Status</th><th className="p-6 text-right">Decision</th></tr>
+                   <tr><th className="p-6">Candidate</th><th className="p-6">Bidding For</th><th className="p-6">Intent</th><th className="p-6 text-center">Status</th><th className="p-6 text-right">Decision</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
                    {filtered.map(n => (
@@ -250,7 +250,7 @@ export default function AdminPage() {
                            <div className="flex flex-wrap gap-2">{n.posts.map(p => <span key={p} className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1.5 rounded-xl text-[8px] font-black uppercase">{p}</span>)}</div>
                         </td>
                         <td className="p-6">
-                           <button onClick={() => setViewReasons({name: n.name, data: n.post_statements || (n.statement ? {'General Statement': n.statement} : {})})} className="px-5 py-2.5 bg-slate-700/50 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-amber-500 transition-all">Review Statement</button>
+                           <button onClick={() => setViewReasons({name: n.name, data: n.post_statements || (n.statement ? {'General Statement': n.statement} : {})})} className="px-5 py-2.5 bg-slate-700/50 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-amber-500 transition-all">Review Justification</button>
                         </td>
                         <td className="p-6 text-center"><span className={`text-[8px] font-black uppercase px-4 py-1.5 rounded-full border ${n.status==='accepted'?'bg-green-500/10 text-green-400 border-green-500/20':n.status==='rejected'?'bg-red-500/10 text-red-500 border-red-500/20':'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}`}>{n.status}</span></td>
                         <td className="p-6 text-right">
@@ -289,7 +289,7 @@ export default function AdminPage() {
                                     </div>
                                  </div>
                                ))}
-                               {apps.length === 0 && <p className="text-center py-10 text-[10px] font-black text-slate-700 tracking-widest italic uppercase opacity-40">No Nominations Yet</p>}
+                               {apps.length === 0 && <p className="text-center py-10 text-[10px] font-black text-slate-700 tracking-widest italic uppercase opacity-40">Zero Contests</p>}
                             </div>
                          </div>
                        );

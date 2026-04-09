@@ -254,7 +254,7 @@ export default function NominatePage() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
         <div className="bg-slate-800 border border-slate-700 p-10 rounded-[2.5rem] shadow-2xl text-center max-w-md w-full space-y-6">
            <div className="text-6xl">🙌</div>
-           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Application Submitted</h2>
+           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Got It!</h2>
            <p className="text-slate-400 text-sm leading-relaxed">Your nomination has been successfully recorded. You can view your status here or withdraw if needed.</p>
            <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl text-left text-xs space-y-3">
               <p><span className="text-white opacity-50 font-bold">NAME:</span> <span className="text-white">{data.name}</span></p>
@@ -281,14 +281,14 @@ export default function NominatePage() {
     <div className="min-h-screen font-serif bg-[linear-gradient(to_bottom_right,#0f172a,#1e3a8a,#0f172a)] py-12 px-4 shadow-inner">
       <div className="max-w-3xl mx-auto space-y-10">
         <div className="text-center group">
-           <h1 className="text-5xl font-black text-white uppercase tracking-tighter group-hover:scale-105 transition-transform duration-500 drop-shadow-lg">Student Council Elections</h1>
-           <p className="text-amber-400 mt-2 text-sm font-black tracking-[0.4em] uppercase drop-shadow-md">Official Election Portal - 2026</p>
+           <h1 className="text-5xl font-black text-white uppercase tracking-tighter group-hover:scale-105 transition-transform duration-500 drop-shadow-lg">Academic Council Nomination</h1>
+           <p className="text-amber-400 mt-2 text-sm font-black tracking-[0.4em] uppercase drop-shadow-md">Elections 2026 - Official Portal</p>
         </div>
 
         {step === 'login' ? (
           <div className="bg-slate-800/80 border border-slate-700 p-12 rounded-[3rem] shadow-2xl text-center space-y-8 max-w-lg mx-auto backdrop-blur-md">
              <div className="text-5xl">🎓</div>
-             <h2 className="text-2xl font-black text-white uppercase tracking-tight">Student Sign-In</h2>
+             <h2 className="text-2xl font-black text-white uppercase tracking-tight">Student Portal</h2>
              <p className="text-slate-400 text-sm leading-relaxed">Sign in with your official <span className="text-white font-bold">@{ALLOWED_DOMAIN}</span> to continue.</p>
              {error && <p className="text-red-400 text-[10px] font-black uppercase bg-red-950/40 p-3 rounded-xl border border-red-500/20 tracking-widest">{error}</p>}
              <button onClick={handleGoogleLogin} disabled={loginLoading} className="w-full py-4 bg-white text-slate-800 font-bold rounded-full text-base flex items-center justify-center gap-4 hover:bg-slate-100 transition-all shadow-lg active:scale-[0.98] border border-slate-200">
@@ -331,14 +331,14 @@ export default function NominatePage() {
                {step === 1 && (
                  <form onSubmit={handleStep1} className="space-y-12">
                    <div className="text-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Eligibility Check</h2>
-                      <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Step 1 / Verify Your Requirements</p>
+                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Eligibility Verification</h2>
+                      <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Step 01 / Basic Requirements</p>
                    </div>
                    
                    <div className="flex justify-center mb-6">
                       <div className="p-8 rounded-[2.5rem] border-2 border-amber-500 bg-amber-500/10 ring-4 ring-amber-500/10 shadow-2xl flex flex-col items-center gap-4 w-64">
                          <div className="w-16 h-16 rounded-[1.25rem] flex items-center justify-center text-3xl font-black transition-all bg-amber-500 text-slate-900 rotate-3">{semester[0]}</div>
-                         <p className="font-black uppercase tracking-[0.2em] text-xs text-amber-500">YOUR SEMESTER: {semester}</p>
+                         <p className="font-black uppercase tracking-[0.2em] text-xs text-amber-500">DETECTED: {semester} SEM</p>
                          <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center bg-amber-500 border-amber-500 text-slate-900 scale-110"><span className="text-[10px] font-black">✓</span></div>
                       </div>
                    </div>
@@ -364,8 +364,8 @@ export default function NominatePage() {
                {step === 2 && (
                  <form onSubmit={handleStep2} className="space-y-10">
                    <div className="flex flex-col items-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Select Your Position</h2>
-                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Choose one role and state your reason</p>
+                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Candidate Intention</h2>
+                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Select 1 Post & explain your fit</p>
                    </div>
 
                    <div className="space-y-6">
@@ -420,8 +420,8 @@ export default function NominatePage() {
                {step === 3 && (
                  <form onSubmit={handleSubmit} className="space-y-12">
                    <div className="text-center space-y-2">
-                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Final Submission</h2>
-                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Please upload a clear photo of yourself</p>
+                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Final Authentication</h2>
+                      <p className="text-slate-500 text-[10px] font-black tracking-widest uppercase">Upload Photo & Confirm Submission</p>
                    </div>
 
                    <div className="bg-slate-900/50 p-8 rounded-[3rem] border border-slate-700/60 flex flex-col items-center space-y-8">
