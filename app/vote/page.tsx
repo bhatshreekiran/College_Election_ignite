@@ -117,8 +117,8 @@ export default function VotePage() {
   };
 
   const submitVotes = async () => {
-    if (!db || !userEmail || Object.keys(votes).length === 0) {
-      setError('Please cast at least one vote before submitting.');
+    if (!db || !userEmail) {
+      setError('System error. Please refresh and try again.');
       return;
     }
     
@@ -314,7 +314,7 @@ export default function VotePage() {
                    )}
                    <button 
                      onClick={submitVotes}
-                     disabled={submitting || Object.keys(votes).length === 0}
+                     disabled={submitting}
                      className="w-full md:w-auto px-16 py-6 bg-amber-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none text-slate-900 font-black rounded-full text-lg uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/20 active:scale-95 transition-all hover:scale-105"
                    >
                      {submitting ? 'Submitting...' : 'Submit Final Votes'}
