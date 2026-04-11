@@ -142,12 +142,12 @@ export default function AdminPage() {
     }
 
     try {
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } = await import('docx');
       const { saveAs } = await import('file-saver');
 
       const children = [
         new Paragraph({
-          text: "Election Results - Ignite Club",
+          text: "Election Results - Ignite Club (Winners Summary)",
           heading: HeadingLevel.HEADING_1,
         }),
         new Paragraph({
@@ -156,9 +156,10 @@ export default function AdminPage() {
         })
       ];
 
+      // --- PAGE 1: WINNERS SUMMARY ---
       ['6th', '4th'].reverse().forEach(sem => {
         children.push(new Paragraph({
-          text: `${sem} Semester Results`,
+          text: `${sem} Semester Winners`,
           heading: HeadingLevel.HEADING_2,
           spacing: { before: 400, after: 200 }
         }));
@@ -166,30 +167,29 @@ export default function AdminPage() {
         POSTS_BY_SEMESTER[sem].forEach(post => {
           const cans = nominations.filter(c => c.semester === sem && c.posts?.includes(post) && c.status === 'accepted');
 
-          children.push(new Paragraph({
-            text: `Post: ${post}`,
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 300, after: 100 }
-          }));
-
           if (cans.length === 0) {
-            children.push(new Paragraph({ children: [new TextRun({ text: "No applications.", italics: true, color: "888888" })] }));
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: "No applications.", italics: true, color: "888888" })
+              ],
+              spacing: { before: 100 }
+            }));
             return;
           }
 
           if (cans.length === 1) {
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${cans[0].name}: `, bold: true }),
-                new TextRun({ text: "Uncontested " }),
-                new TextRun({ text: "🏆 [WINNER]", color: "D97706", bold: true })
-              ]
+                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${cans[0].name} (Uncontested Winner)`, color: "D97706", bold: true })
+              ],
+              spacing: { before: 100 }
             }));
             return;
           }
 
           const postVotes = votesData.map(v => ({ candidateEmail: v.votes?.[post] })).filter(v => v.candidateEmail);
-          
           const voteCounts: Record<string, number> = {};
           postVotes.forEach(v => {
             voteCounts[v.candidateEmail] = (voteCounts[v.candidateEmail] || 0) + 1;
@@ -197,18 +197,105 @@ export default function AdminPage() {
 
           const maxVotes = Math.max(0, ...Object.values(voteCounts));
           const winnersCount = cans.filter(c => (voteCounts[c.email] || 0) === maxVotes).length;
-          const sortedCans = [...cans].sort((a,b) => (voteCounts[b.email]||0) - (voteCounts[a.email]||0));
 
-          sortedCans.forEach(c => {
-            const count = voteCounts[c.email] || 0;
-            const isWinner = count > 0 && count === maxVotes && winnersCount === 1;
+          if (maxVotes === 0) {
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${c.name}: `, bold: true }),
-                new TextRun({ text: `${count} votes ` }),
-                new TextRun({ text: isWinner ? "🏆 [WINNER]" : "", color: "D97706", bold: true })
-              ]
+                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: "No votes cast yet.", italics: true, color: "888888" })
+              ],
+              spacing: { before: 100 }
             }));
+          } else if (winnersCount === 1) {
+            const winner = cans.find(c => (voteCounts[c.email] || 0) === maxVotes);
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${winner?.name} `, color: "D97706", bold: true }),
+                new TextRun({ text: `(${maxVotes} votes)` })
+              ],
+              spacing: { before: 100 }
+            }));
+          } else {
+            const tiedCans = cans.filter(c => (voteCounts[c.email] || 0) === maxVotes).map(c => c.name);
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `TIE BETWEEN: ${tiedCans.join(', ')} `, color: "FF0000", bold: true }),
+                new TextRun({ text: `(${maxVotes} votes each)` })
+              ],
+              spacing: { before: 100 }
+            }));
+          }
+        });
+      });
+
+      // --- PAGE 2: DETAILED VOTE LOGS & TIMESTAMPS ---
+      children.push(new Paragraph({
+        children: [new PageBreak()]
+      }));
+
+      children.push(new Paragraph({
+        text: "Detailed Vote Logs & Timestamps",
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 400 }
+      }));
+
+      ['6th', '4th'].reverse().forEach(sem => {
+        children.push(new Paragraph({
+          text: `${sem} Semester Detailed Logs`,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 400, after: 200 }
+        }));
+
+        POSTS_BY_SEMESTER[sem].forEach(post => {
+          const cans = nominations.filter(c => c.semester === sem && c.posts?.includes(post) && c.status === 'accepted');
+          
+          if (cans.length === 0) return; // Skip posts with no candidates on detailed logs
+
+          children.push(new Paragraph({
+            text: `Post: ${post} ${cans.length === 1 ? '(Uncontested)' : ''}`,
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 300, after: 100 }
+          }));
+
+          const postVotesRaw = votesData.filter(v => v.votes?.[post]).map(v => {
+            const dateObj = v.timestamp?.toDate ? v.timestamp.toDate() : new Date(v.timestamp);
+            return {
+              candidateEmail: v.votes[post],
+              timeDate: dateObj,
+              timeStr: dateObj.toLocaleString()
+            };
+          }).sort((a, b) => a.timeDate.getTime() - b.timeDate.getTime());
+
+          const sortedCans = [...cans].sort((a,b) => {
+             const aVotes = postVotesRaw.filter(v => v.candidateEmail === a.email).length;
+             const bVotes = postVotesRaw.filter(v => v.candidateEmail === b.email).length;
+             return bVotes - aVotes;
+          });
+
+          sortedCans.forEach(c => {
+             const cVotes = postVotesRaw.filter(v => v.candidateEmail === c.email);
+             
+             children.push(new Paragraph({
+               children: [
+                 new TextRun({ text: `${c.name} - ${cVotes.length} votes`, bold: true })
+               ],
+               spacing: { before: 150, after: 50 },
+             }));
+
+             if (cVotes.length === 0) {
+               children.push(new Paragraph({
+                 children: [new TextRun({ text: "      No votes recorded.", italics: true, color: "888888" })]
+               }));
+             } else {
+               cVotes.forEach((vLog, i) => {
+                  children.push(new Paragraph({
+                     children: [new TextRun({ text: `      [Vote ${i + 1}]  Anonymous Voter  --  ${vLog.timeStr}` })],
+                     spacing: { after: 50 }
+                  }));
+               });
+             }
           });
         });
       });
