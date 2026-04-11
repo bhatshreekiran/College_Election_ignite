@@ -30,56 +30,58 @@ export default function AdminPage() {
   const router = useRouter();
 
   const [nominations, setNominations] = useState<Nomination[]>([]);
+  const [votesData, setVotesData] = useState<any[]>([]);
   const [filterStatus, setFilterStatus]     = useState('all');
   const [filterSemester, setFilterSemester] = useState('all');
   const [filterPost, setFilterPost]         = useState('all');
-  const [viewMode, setViewMode]             = useState<'table' | 'posts'>('posts');
+  const [viewMode, setViewMode]             = useState<'table' | 'posts' | 'votes'>('posts');
+  const [searchVoterQuery, setSearchVoterQuery] = useState('');
 
   const [previewPhoto, setPreviewPhoto] = useState('');
   const [viewReasons, setViewReasons]   = useState<{name: string, data: Record<string, string>} | null>(null);
 
   useEffect(() => {
     if (!auth) return;
-    // Force logout on entry to ensure the credential form is always seen first
-    signOut(auth).then(() => {
-      setIsLoggedIn(false);
-    });
-
-    const unsub = auth.onAuthStateChanged((u: any) => {
-      if (u) {
-        const email = u.email?.toLowerCase() || '';
-        // Redirect test faculty accounts to student portal
-        if (email.includes('sarveshsir.23ad') || email.includes('sarveshsir.24ad')) {
-          router.push('/nominate');
-          return;
-        }
-        setIsLoggedIn(true);
-      }
-      else setIsLoggedIn(false);
-    });
-    return unsub;
+    // Force logout from any previous sessions when entering admin portal
+    signOut(auth).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!isLoggedIn || !db) return;
-    const unsub = onSnapshot(collection(db, 'nominations'), snapshot => {
+    const unsubNoms = onSnapshot(collection(db, 'nominations'), snapshot => {
       const noms = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Nomination));
       noms.sort((a, b) => (b.submittedAt?.toMillis?.() ?? 0) - (a.submittedAt?.toMillis?.() ?? 0));
       setNominations(noms);
     });
-    return unsub;
+    const unsubVotes = onSnapshot(collection(db, 'votes'), snapshot => {
+      setVotesData(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => { unsubNoms(); unsubVotes(); };
   }, [isLoggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
     setLoginLoading(true); setLoginError('');
-    try { await signInWithEmailAndPassword(auth, adminEmail, password); }
-    catch { setLoginError('Invalid credentials.'); }
-    finally { setLoginLoading(false); }
+    if (adminEmail.toLowerCase() === 'vote@sode-edu.in' && password === 'vote@123') {
+      try {
+        if (auth) {
+          // Keep Firebase auth running in background purely for Firestore rules compliance if any exist, but don't strictly require it to succeed.
+          await signInWithEmailAndPassword(auth, adminEmail, password).catch(() => {});
+        }
+        setIsLoggedIn(true);
+      } finally {
+        setLoginLoading(false);
+      }
+    } else {
+      setLoginError('Invalid credentials.');
+      setLoginLoading(false);
+    }
   };
 
-  const handleLogout = () => auth && signOut(auth);
+  const handleLogout = () => {
+    if (auth) signOut(auth).catch(() => {});
+    setIsLoggedIn(false);
+  };
 
   const updateStatus = async (nomId: string, status: 'accepted' | 'rejected' | 'pending') => {
     if (!db) return;
@@ -130,6 +132,96 @@ export default function AdminPage() {
     } catch (err) {
       console.error('PDF generation error:', err);
       alert('Could not generate PDF. Please try again.');
+    }
+  };
+
+  const generateResultsWord = async () => {
+    if (votesData.length === 0) {
+      alert('No votes data available.');
+      return;
+    }
+
+    try {
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+      const { saveAs } = await import('file-saver');
+
+      const children = [
+        new Paragraph({
+          text: "Election Results - Ignite Club",
+          heading: HeadingLevel.HEADING_1,
+        }),
+        new Paragraph({
+          text: `Generated on: ${new Date().toLocaleString()}`,
+          spacing: { after: 400 }
+        })
+      ];
+
+      ['6th', '4th'].reverse().forEach(sem => {
+        children.push(new Paragraph({
+          text: `${sem} Semester Results`,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 400, after: 200 }
+        }));
+
+        POSTS_BY_SEMESTER[sem].forEach(post => {
+          const cans = nominations.filter(c => c.semester === sem && c.posts?.includes(post) && c.status === 'accepted');
+
+          children.push(new Paragraph({
+            text: `Post: ${post}`,
+            heading: HeadingLevel.HEADING_3,
+            spacing: { before: 300, after: 100 }
+          }));
+
+          if (cans.length === 0) {
+            children.push(new Paragraph({ children: [new TextRun({ text: "No applications.", italics: true, color: "888888" })] }));
+            return;
+          }
+
+          if (cans.length === 1) {
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: `${cans[0].name}: `, bold: true }),
+                new TextRun({ text: "Uncontested " }),
+                new TextRun({ text: "🏆 [WINNER]", color: "D97706", bold: true })
+              ]
+            }));
+            return;
+          }
+
+          const postVotes = votesData.map(v => ({ candidateEmail: v.votes?.[post] })).filter(v => v.candidateEmail);
+          
+          const voteCounts: Record<string, number> = {};
+          postVotes.forEach(v => {
+            voteCounts[v.candidateEmail] = (voteCounts[v.candidateEmail] || 0) + 1;
+          });
+
+          const maxVotes = Math.max(0, ...Object.values(voteCounts));
+          const winnersCount = cans.filter(c => (voteCounts[c.email] || 0) === maxVotes).length;
+          const sortedCans = [...cans].sort((a,b) => (voteCounts[b.email]||0) - (voteCounts[a.email]||0));
+
+          sortedCans.forEach(c => {
+            const count = voteCounts[c.email] || 0;
+            const isWinner = count > 0 && count === maxVotes && winnersCount === 1;
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: `${c.name}: `, bold: true }),
+                new TextRun({ text: `${count} votes ` }),
+                new TextRun({ text: isWinner ? "🏆 [WINNER]" : "", color: "D97706", bold: true })
+              ]
+            }));
+          });
+        });
+      });
+
+      const docx = new Document({
+        sections: [{ properties: {}, children }]
+      });
+
+      const blob = await Packer.toBlob(docx);
+      saveAs(blob, `Election_Results_${Date.now()}.docx`);
+    } catch (err) {
+      console.error('Word generation error:', err);
+      alert('Could not generate Word document. Please ensure docx is installed.');
     }
   };
 
@@ -200,9 +292,17 @@ export default function AdminPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Export Accepted (PDF)
               </button>
+              <button 
+                onClick={generateResultsWord}
+                className="px-5 py-2.5 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/20 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 shadow-xl active:scale-95"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Export Results (Word)
+              </button>
               <div className="bg-slate-800/80 p-1 rounded-2xl border border-slate-700 flex">
                 <button onClick={() => setViewMode('posts')} className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all ${viewMode === 'posts' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>By Post</button>
                 <button onClick={() => setViewMode('table')} className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all ${viewMode === 'table' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>Table</button>
+                <button onClick={() => setViewMode('votes')} className={`px-6 py-2 rounded-xl text-xs font-semibold transition-all ${viewMode === 'votes' ? 'bg-amber-500 text-slate-900' : 'text-slate-500'}`}>Live Votes</button>
               </div>
               <button onClick={handleLogout} className="px-5 py-2.5 bg-red-900/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-xs font-semibold transition-all">Sign Out</button>
            </div>
@@ -239,7 +339,7 @@ export default function AdminPage() {
            </div>
         </div>
 
-        {viewMode === 'table' ? (
+        {viewMode === 'table' && (
           <div className="bg-slate-800/40 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm">
              <table className="w-full text-left">
                 <thead className="bg-slate-800/80 text-xs font-semibold text-slate-500 border-b border-slate-700">
@@ -248,12 +348,12 @@ export default function AdminPage() {
                 <tbody className="divide-y divide-slate-700/40">
                    {filtered.map(n => (
                      <tr key={n.id} className="hover:bg-slate-700/10 transition-colors">
-                        <td className="p-6 flex items-center gap-4">
-                           <img src={n.photo_base64} onClick={() => setPreviewPhoto(n.photo_base64)} className="w-14 h-14 rounded-2xl object-cover cursor-pointer hover:ring-2 hover:ring-amber-500 transition-all border border-slate-700 shadow-lg" title="View Full Photo" />
+                        <td className="p-6 flex items-center gap-6">
+                           <img src={n.photo_base64} onClick={() => setPreviewPhoto(n.photo_base64)} className="w-20 h-20 rounded-2xl object-cover cursor-pointer hover:ring-4 hover:ring-amber-500 transition-all border-2 border-slate-700 shadow-xl" title="View Full Photo" />
                            <div>
-                             <p className="text-white font-black text-xs uppercase">{n.name}</p>
-                             <p className="text-[10px] font-bold text-slate-500">{n.email}</p>
-                             <p className="text-[9px] font-black text-amber-500/80 uppercase">{n.semester} Sem{n.year ? ` • ${n.year}` : ''}</p>
+                             <p className="text-white font-black text-sm md:text-base uppercase">{n.name}</p>
+                             <p className="text-xs font-bold text-slate-500">{n.email}</p>
+                             <p className="text-[10px] md:text-xs font-black text-amber-500/80 uppercase mt-1">{n.semester} Sem{n.year ? ` • ${n.year}` : ''}</p>
                            </div>
                         </td>
                         <td className="p-6">
@@ -275,7 +375,9 @@ export default function AdminPage() {
                 </tbody>
              </table>
           </div>
-        ) : (
+        )}
+        
+        {viewMode === 'posts' && (
           <div className="space-y-16">
              {['6th', '4th'].reverse().map(sem => (
                <div key={sem} className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
@@ -288,10 +390,14 @@ export default function AdminPage() {
                             <div className="flex justify-between items-start"><h3 className="text-xs font-black text-white uppercase tracking-[0.2em] group-hover:text-amber-500 transition-colors">{post}</h3><span className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1 text-[10px] font-black text-amber-500">{apps.length} Total</span></div>
                             <div className="flex-1 space-y-4">
                                {apps.map(a => (
-                                 <div key={a.id} className="flex items-center justify-between p-4 bg-slate-900/40 border border-slate-700/40 rounded-[1.5rem] hover:bg-slate-900/80 transition-all group/bid hover:shadow-lg">
-                                    <div className="flex items-center gap-4">
-                                       <img src={a.photo_base64} onClick={() => setPreviewPhoto(a.photo_base64)} className="w-10 h-10 rounded-xl object-cover cursor-pointer border border-slate-700" alt="Face" />
-                                       <div><p className="text-[10px] font-black text-white uppercase group-hover/bid:text-amber-400 truncate w-24 transition-colors">{a.name}</p><p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{a.status}</p></div>
+                                 <div key={a.id} className="flex items-center justify-between p-5 bg-slate-900/40 border border-slate-700/40 rounded-[2rem] hover:bg-slate-900/80 transition-all group/bid hover:shadow-xl">
+                                    <div className="flex items-center gap-5">
+                                       <img src={a.photo_base64} onClick={() => setPreviewPhoto(a.photo_base64)} className="w-16 h-16 md:w-20 md:h-20 rounded-[1.25rem] object-cover cursor-pointer border-2 border-slate-700 shadow-lg" alt="Face" />
+                                       <div>
+                                          <p className="text-xs md:text-sm font-black text-white uppercase group-hover/bid:text-amber-400 w-32 md:w-48 transition-colors truncate">{a.name}</p>
+                                          <p className="text-[9px] md:text-[10px] font-bold text-slate-500 mt-0.5">{a.email}</p>
+                                          <p className="text-[9px] md:text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">{a.status}</p>
+                                       </div>
                                     </div>
                                     <div className="flex gap-2 opacity-0 group-hover/bid:opacity-100 transition-opacity">
                                        <button onClick={() => setViewReasons({name: a.name, data: a.post_statements || (a.statement ? {'General': a.statement} : {})})} className="p-2 bg-amber-500/10 text-amber-500 rounded-xl hover:bg-amber-500 hover:text-slate-900 transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
@@ -307,6 +413,109 @@ export default function AdminPage() {
                   </div>
                </div>
              ))}
+          </div>
+        )}
+
+        {viewMode === 'votes' && (
+          <div className="space-y-16">
+            <div className="flex flex-col gap-6 bg-slate-800/40 border border-slate-700/60 rounded-[2rem] p-6 shadow-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-black text-white flex items-center gap-4"><span className="text-3xl">📊</span> Live Election Results</h2>
+                <p className="text-amber-500 text-sm font-bold bg-amber-500/10 px-4 py-2 rounded-xl">{votesData.length} Total Votes Cast</p>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search vote log by voter email or name..." 
+                value={searchVoterQuery}
+                onChange={e => setSearchVoterQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus:border-amber-500 transition-all placeholder-slate-500"
+              />
+            </div>
+            {['6th', '4th'].reverse().map(sem => {
+              const postsForSem = POSTS_BY_SEMESTER[sem];
+              return (
+                <div key={sem} className="space-y-8">
+                  <h3 className="text-xl font-bold text-slate-300 border-b border-slate-700/50 pb-4">{sem} Semester Data</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {postsForSem.map(post => {
+                      // Candidates for this post
+                      const cans = nominations.filter(c => c.semester === sem && c.posts?.includes(post) && c.status === 'accepted');
+                      if (cans.length <= 1) return null; // No voting happened for this post
+                      
+                      // Count votes
+                      const postVotes = votesData.map(v => ({ voter: v.name || v.email, voterEmail: v.email, candidateEmail: v.votes?.[post], time: v.timestamp?.toDate ? v.timestamp.toDate() : new Date(v.timestamp) })).filter(v => v.candidateEmail);
+                      
+                      const voteCounts: Record<string, number> = {};
+                      postVotes.forEach(v => {
+                        voteCounts[v.candidateEmail] = (voteCounts[v.candidateEmail] || 0) + 1;
+                      });
+
+                      const maxVotes = Math.max(0, ...Object.values(voteCounts));
+                      const winnersCount = cans.filter(c => (voteCounts[c.email] || 0) === maxVotes).length;
+
+                      return (
+                        <div key={post} className="bg-slate-800/60 border border-slate-700 rounded-[2rem] p-8 shadow-2xl flex flex-col gap-6">
+                            <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                              <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest">{post}</h4>
+                              <span className="text-xs font-bold text-slate-400">{postVotes.length} Votes</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              {cans.map(c => {
+                                const count = voteCounts[c.email] || 0;
+                                const isWinner = count > 0 && count === maxVotes && winnersCount === 1;
+                                const percent = postVotes.length > 0 ? (count / postVotes.length) * 100 : 0;
+                                
+                                return (
+                                  <div key={c.email} className={`relative p-5 md:p-6 rounded-[2rem] border-2 transition-all ${isWinner ? 'bg-amber-500/10 border-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-900/40 border-slate-700/40'}`}>
+                                    <div className="flex items-center gap-6 relative z-10">
+                                      <img src={c.photo_base64} className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-slate-700 shadow-md" alt="Candidate" />
+                                      <div className="flex-1">
+                                        <p className="text-sm md:text-lg font-black text-white uppercase">{c.name}</p>
+                                        <p className="text-xs md:text-sm font-bold text-slate-400 mt-1">{count} <span className="font-medium text-slate-500">Votes</span></p>
+                                      </div>
+                                    </div>
+                                    <div className="absolute top-0 left-0 h-full bg-amber-500/20 rounded-[2rem] transition-all duration-1000" style={{ width: `${percent}%` }} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="mt-6 pt-6 border-t border-slate-700/50 max-h-64 overflow-y-auto custom-scrollbar">
+                              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Detailed Vote Log {searchVoterQuery && <span className="text-amber-500 lowercase">({searchVoterQuery})</span>}</p>
+                              {(() => {
+                                const filteredLog = postVotes.sort((a,b) => b.time.getTime() - a.time.getTime()).filter(v => 
+                                  v.voter.toLowerCase().includes(searchVoterQuery.toLowerCase()) || 
+                                  v.voterEmail.toLowerCase().includes(searchVoterQuery.toLowerCase())
+                                );
+                                
+                                if (filteredLog.length === 0) {
+                                  return <p className="text-[10px] text-slate-600 italic">No votes found.</p>;
+                                }
+
+                                return (
+                                  <ul className="space-y-3">
+                                    {filteredLog.map((v, i) => {
+                                      const votedFor = cans.find(c => c.email === v.candidateEmail)?.name || 'Unknown';
+                                      const displayVoter = 'Anonymous Voter';
+                                      return (
+                                        <li key={i} className="text-xs md:text-sm text-slate-300 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                          <span className="font-bold text-white">{displayVoter}</span> voted for <span className="text-amber-500 font-bold">{votedFor}</span>
+                                          <div className="text-slate-500 text-[10px] md:text-xs mt-1.5 font-medium">{v.time.toLocaleString()}</div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                );
+                              })()}
+                            </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
