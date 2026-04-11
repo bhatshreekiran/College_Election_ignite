@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { collection, doc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
-import { POSTS_BY_SEMESTER } from '@/lib/constants';
+import { POSTS_BY_SEMESTER, formatPostName } from '@/lib/constants';
 
 const ALLOWED_DOMAIN = 'sode-edu.in';
 
@@ -171,7 +171,7 @@ export default function VotePage() {
         <div className="space-y-12">
           {applicablePosts.map(({ post, cans }) => (
             <div key={post} className="bg-slate-800/60 border border-slate-700/60 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-md">
-              <h3 className="text-xl font-black text-amber-500 uppercase tracking-widest text-center mb-8 border-b border-amber-500/20 pb-4">{post}</h3>
+              <h3 className="text-xl font-black text-amber-500 uppercase tracking-widest text-center mb-8 border-b border-amber-500/20 pb-4">{formatPostName(post)}</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {cans.map(can => {
                   const isSelected = votes[post] === can.email;

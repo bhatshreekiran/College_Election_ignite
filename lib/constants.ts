@@ -164,3 +164,5 @@ export const POSTS_BY_SEMESTER: Record<string, string[]> = {
 };
 
 export const ALL_POSTS = [...POSTS_BY_SEMESTER['4th'], ...POSTS_BY_SEMESTER['6th']];
+
+export const formatPostName = (name: string) => name.replace('Co-ordinator', 'Coordinator');

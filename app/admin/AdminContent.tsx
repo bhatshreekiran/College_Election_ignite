@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { isFirebaseConfigured, auth, db } from '@/lib/firebase';
-import { POSTS_BY_SEMESTER, ALL_POSTS } from '@/lib/constants';
+import { POSTS_BY_SEMESTER, ALL_POSTS, formatPostName } from '@/lib/constants';
 
 interface Nomination {
   id: string;
@@ -28,6 +28,13 @@ export default function AdminPage() {
   const [loginError, setLoginError]   = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const router = useRouter();
+
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetPin, setResetPin] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const [nominations, setNominations] = useState<Nomination[]>([]);
   const [votesData, setVotesData] = useState<any[]>([]);
@@ -62,19 +69,71 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true); setLoginError('');
-    if (adminEmail.toLowerCase() === 'vote@sode-edu.in' && password === 'vote@123') {
+    try {
+      let activePassword = 'vote@123';
       try {
+        const snap = await getDoc(doc(db, 'config', 'adminAuth'));
+        if (snap.exists() && snap.data().password) {
+          activePassword = snap.data().password;
+        } else {
+          const local = localStorage.getItem('adminPassword');
+          if (local) activePassword = local;
+        }
+      } catch (err) {
+        const local = localStorage.getItem('adminPassword');
+        if (local) activePassword = local;
+      }
+
+      if (adminEmail.toLowerCase() === 'vote@sode-edu.in' && password === activePassword) {
         if (auth) {
-          // Keep Firebase auth running in background purely for Firestore rules compliance if any exist, but don't strictly require it to succeed.
           await signInWithEmailAndPassword(auth, adminEmail, password).catch(() => {});
         }
         setIsLoggedIn(true);
-      } finally {
-        setLoginLoading(false);
+      } else {
+        setLoginError('Invalid credentials.');
       }
-    } else {
-      setLoginError('Invalid credentials.');
+    } catch (e) {
+      setLoginError('Login failed.');
+    } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+
+    if (resetEmail.toLowerCase() !== 'vote@sode-edu.in') {
+      setResetError('Incorrect administrator email.');
+      return;
+    }
+    if (resetPin !== '998877') { // Secret PIN
+      setResetError('Invalid Security PIN.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+
+    try {
+      try {
+        await setDoc(doc(db, 'config', 'adminAuth'), { password: newPassword }, { merge: true });
+      } catch (err) {
+        // Fallback to local storage if firestore rules block unauthenticated writes
+      }
+      localStorage.setItem('adminPassword', newPassword);
+      setResetSuccess('Password updated successfully! Switching to login...');
+      setTimeout(() => {
+        setResetMode(false);
+        setResetSuccess('');
+        setResetEmail('');
+        setResetPin('');
+        setNewPassword('');
+      }, 2000);
+    } catch (err) {
+      setResetError('Failed to update password.');
     }
   };
 
@@ -170,7 +229,7 @@ export default function AdminPage() {
           if (cans.length === 0) {
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${formatPostName(post)}: `, bold: true }),
                 new TextRun({ text: "No applications.", italics: true, color: "888888" })
               ],
               spacing: { before: 100 }
@@ -181,7 +240,7 @@ export default function AdminPage() {
           if (cans.length === 1) {
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${formatPostName(post)}: `, bold: true }),
                 new TextRun({ text: `${cans[0].name} (Uncontested Winner)`, color: "D97706", bold: true })
               ],
               spacing: { before: 100 }
@@ -201,7 +260,7 @@ export default function AdminPage() {
           if (maxVotes === 0) {
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${formatPostName(post)}: `, bold: true }),
                 new TextRun({ text: "No votes cast yet.", italics: true, color: "888888" })
               ],
               spacing: { before: 100 }
@@ -210,7 +269,7 @@ export default function AdminPage() {
             const winner = cans.find(c => (voteCounts[c.email] || 0) === maxVotes);
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${formatPostName(post)}: `, bold: true }),
                 new TextRun({ text: `${winner?.name} `, color: "D97706", bold: true }),
                 new TextRun({ text: `(${maxVotes} votes)` })
               ],
@@ -220,7 +279,7 @@ export default function AdminPage() {
             const tiedCans = cans.filter(c => (voteCounts[c.email] || 0) === maxVotes).map(c => c.name);
             children.push(new Paragraph({
               children: [
-                new TextRun({ text: `${post}: `, bold: true }),
+                new TextRun({ text: `${formatPostName(post)}: `, bold: true }),
                 new TextRun({ text: `TIE BETWEEN: ${tiedCans.join(', ')} `, color: "FF0000", bold: true }),
                 new TextRun({ text: `(${maxVotes} votes each)` })
               ],
@@ -254,7 +313,7 @@ export default function AdminPage() {
           if (cans.length === 0) return; // Skip posts with no candidates on detailed logs
 
           children.push(new Paragraph({
-            text: `Post: ${post} ${cans.length === 1 ? '(Uncontested)' : ''}`,
+            text: `Post: ${formatPostName(post)} ${cans.length === 1 ? '(Uncontested)' : ''}`,
             heading: HeadingLevel.HEADING_3,
             spacing: { before: 300, after: 100 }
           }));
@@ -321,6 +380,31 @@ export default function AdminPage() {
 
   if (!isFirebaseConfigured) return <div className="p-20 text-white text-center">Firebase Not Configured</div>;
   if (!isLoggedIn) {
+     if (resetMode) {
+       return (
+         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+           <form onSubmit={handleReset} className="bg-slate-800 p-8 rounded-3xl w-full max-w-sm border border-slate-700 space-y-4 shadow-2xl">
+             <div className="text-center space-y-2">
+                <div className="text-4xl">🔑</div>
+                <h1 className="text-xl font-bold text-white">Reset Password</h1>
+                <p className="text-[10px] text-slate-400 font-medium pb-2">To uniquely reset the offline password, provide your Secret Security PIN.</p>
+             </div>
+             {resetError && <p className="text-red-400 text-[10px] font-bold text-center uppercase tracking-widest">{resetError}</p>}
+             {resetSuccess && <p className="text-green-400 text-[10px] font-bold text-center uppercase tracking-widest">{resetSuccess}</p>}
+             <div className="space-y-4">
+                <input type="email" placeholder="Admin Email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
+                <input type="password" placeholder="Security PIN" value={resetPin} onChange={e => setResetPin(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
+                <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" minLength={6} required />
+             </div>
+             <button type="submit" className="w-full py-4 bg-amber-500 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm shadow-xl shadow-amber-500/10 active:scale-95 transition-all">Update Password</button>
+             <div className="text-center mt-4">
+               <button type="button" onClick={() => setResetMode(false)} className="text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-colors">Back to Login</button>
+             </div>
+           </form>
+         </div>
+       );
+     }
+
      return (
        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
          <form onSubmit={handleLogin} className="bg-slate-800 p-8 rounded-3xl w-full max-w-sm border border-slate-700 space-y-4 shadow-2xl">
@@ -333,7 +417,10 @@ export default function AdminPage() {
               <input type="email" placeholder="Email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
               <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 bg-slate-700/50 border border-slate-600 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm" required />
            </div>
-           <button type="submit" className="w-full py-4 bg-amber-500 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm shadow-xl shadow-amber-500/10 active:scale-95 transition-all">{loginLoading ? 'Logging in...' : 'Log In'}</button>
+           <div className="flex justify-end px-1 pt-2">
+             <button type="button" onClick={() => setResetMode(true)} className="text-[10px] uppercase font-bold text-slate-500 hover:text-amber-500 transition-colors">Forgot Password?</button>
+           </div>
+           <button type="submit" className="w-full py-4 mt-4 bg-amber-500 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm shadow-xl shadow-amber-500/10 active:scale-95 transition-all">{loginLoading ? 'Logging in...' : 'Log In'}</button>
          </form>
        </div>
      );
@@ -474,7 +561,7 @@ export default function AdminPage() {
                        const apps = nominations.filter(a => a.posts?.includes(post) && (filterStatus === 'all' || a.status === filterStatus));
                        return (
                          <div key={post} className="bg-slate-800/40 border border-slate-700 rounded-[2.5rem] p-8 space-y-6 hover:border-amber-500/30 transition-all flex flex-col group backdrop-blur-sm shadow-xl">
-                            <div className="flex justify-between items-start"><h3 className="text-xs font-black text-white uppercase tracking-[0.2em] group-hover:text-amber-500 transition-colors">{post}</h3><span className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1 text-[10px] font-black text-amber-500">{apps.length} Total</span></div>
+                            <div className="flex justify-between items-start"><h3 className="text-xs font-black text-white uppercase tracking-[0.2em] group-hover:text-amber-500 transition-colors">{formatPostName(post)}</h3><span className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1 text-[10px] font-black text-amber-500">{apps.length} Total</span></div>
                             <div className="flex-1 space-y-4">
                                {apps.map(a => (
                                  <div key={a.id} className="flex items-center justify-between p-5 bg-slate-900/40 border border-slate-700/40 rounded-[2rem] hover:bg-slate-900/80 transition-all group/bid hover:shadow-xl">
@@ -543,7 +630,7 @@ export default function AdminPage() {
                       return (
                         <div key={post} className="bg-slate-800/60 border border-slate-700 rounded-[2rem] p-8 shadow-2xl flex flex-col gap-6">
                             <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-                              <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest">{post}</h4>
+                              <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest">{formatPostName(post)}</h4>
                               <span className="text-xs font-bold text-slate-400">{postVotes.length} Votes</span>
                             </div>
 
